@@ -7,7 +7,7 @@
 </head>
 <body>
   <h1>Tableau de Bord des Responsables</h1>
-  
+
   <!-- Section pour afficher le nom de la société -->
   <h2 id="societeName" style="color: gray;">Société : </h2> <!-- Le nom de la société sera affiché ici -->
 
@@ -65,11 +65,19 @@
     <tbody></tbody>
   </table>
 
-  <!-- Section pour afficher et supprimer les commerciaux de la société -->
+  <!-- Tableau pour afficher et supprimer les commerciaux de la société -->
   <h2>Liste des Commerciaux</h2>
-  <ul id="commercialsContainer">
-    <!-- La liste des commerciaux avec bouton de suppression sera générée ici par JavaScript -->
-  </ul>
+  <table id="commercialsTable">
+    <thead>
+      <tr>
+        <th>Email du Commercial</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="commercialsContainer">
+      <!-- La liste des commerciaux avec bouton de suppression sera générée ici par JavaScript -->
+    </tbody>
+  </table>
 
   <!-- Charger Firebase SDK et Chart.js depuis les CDN -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>

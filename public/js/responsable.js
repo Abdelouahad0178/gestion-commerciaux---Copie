@@ -63,10 +63,10 @@ function remplirSelecteurCommerciaux(societeId) {
     .catch((error) => console.error("Erreur lors de la récupération des commerciaux :", error));
 }
 
-// Fonction pour afficher la liste des commerciaux avec option de suppression
+// Fonction pour afficher la liste des commerciaux sous forme de tableau avec option de suppression
 function afficherListeCommerciaux(societeId) {
   const commercialsContainer = document.getElementById("commercialsContainer");
-  commercialsContainer.innerHTML = ""; // Réinitialiser la liste
+  commercialsContainer.innerHTML = ""; // Réinitialiser le tableau
 
   firebase.firestore().collection("Users")
     .where("role", "==", "commercial")
@@ -77,22 +77,19 @@ function afficherListeCommerciaux(societeId) {
         const commercial = userDoc.data();
         const commercialId = userDoc.id;
 
-        // Créez l'élément de liste avec le bouton de suppression
-        const li = document.createElement("li");
-        li.textContent = commercial.email;
-
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "Supprimer";
-        deleteButton.onclick = () => supprimerCommercial(commercialId);
-
-        li.appendChild(deleteButton);
-        commercialsContainer.appendChild(li);
+        // Créez la ligne de tableau avec le bouton de suppression
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${commercial.email}</td>
+          <td><button onclick="supprimerCommercial('${commercialId}')">Supprimer</button></td>
+        `;
+        commercialsContainer.appendChild(tr);
       });
     })
     .catch((error) => console.error("Erreur lors de la récupération des commerciaux :", error));
 }
 
-/// Fonction pour supprimer un commercial et mettre à jour la liste et le sélecteur
+// Fonction pour supprimer un commercial et mettre à jour la liste et le sélecteur
 function supprimerCommercial(commercialId) {
   if (confirm("Êtes-vous sûr de vouloir supprimer ce commercial ?")) {
     firebase.firestore().collection("Users").doc(commercialId).delete()
@@ -112,15 +109,13 @@ function supprimerCommercial(commercialId) {
             // Mettre à jour le sélecteur des commerciaux
             const commercialSelector = document.getElementById("commercialSelector");
             commercialSelector.innerHTML = '<option value="">-- Tous les commerciaux --</option>'; // Réinitialise le sélecteur
-            remplirSelecteurCommerciaux(societeId); // Recharge le sélecteur des commerciaux
+            remplirSelecteurCommerciaux(societeId);
           })
           .catch((error) => console.error("Erreur lors de la récupération du societeId :", error));
       })
       .catch((error) => console.error("Erreur lors de la suppression du commercial :", error));
   }
 }
-
-
 
 // Fonction pour afficher le rapport en fonction des sélecteurs de commercial et de la plage de dates
 function afficherRapport() {
