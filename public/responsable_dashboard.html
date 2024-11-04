@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -7,9 +8,9 @@
 </head>
 <body>
   <h1>Tableau de Bord des Responsables</h1>
-
+  
   <!-- Section pour afficher le nom de la société -->
-  <h2 id="societeName" style="color: gray;">Société : </h2> <!-- Le nom de la société sera affiché ici -->
+  <h2 id="societeId" style="color: gray;">Société : </h2> <!-- Le nom de la société sera affiché ici -->
 
   <!-- Bouton pour se déconnecter et revenir à la page de connexion -->
   <button onclick="exitToHome()">Déconnexion</button>
@@ -31,8 +32,11 @@
   <table id="tableRecapCommerciaux">
     <thead>
       <tr>
-        <th>Nom du Commercial</th>
-        <th>Total des Ventes (MAD)</th>
+        <th>Commercial</th>
+        <th>Total des Ventes</th>
+        <th>Pourcentage (%)</th>
+        <th>Montant Calculé</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -44,14 +48,26 @@
     </tfoot>
   </table>
 
+  <a href="recapitulatif_ventes.html" class="link-button">Voir Ventes Validées</a>
+
+
+
+
   <!-- Bouton pour générer le diagramme -->
-  <button onclick="genererDiagramme()">Générer le Diagramme</button>
+  <button onclick="toggleDiagramme()">Générer le Diagramme</button>
 
   <!-- Zone pour le diagramme en disque -->
   <canvas id="salesChart" width="400" height="400"></canvas>
 
   <!-- Tableau pour les détails des clients et ventes -->
   <h2>Détails des Transactions</h2>
+
+
+
+  <label for="searchBar">Rechercher un client par nom :</label>
+  <input type="text" id="searchBar" placeholder="Entrer une lettre pour rechercher" onkeyup="filtrerClientsParNom()">
+  
+
   <table id="tableDetailsClients">
     <thead>
       <tr>
@@ -65,19 +81,11 @@
     <tbody></tbody>
   </table>
 
-  <!-- Tableau pour afficher et supprimer les commerciaux de la société -->
+  <!-- Section pour afficher et supprimer les commerciaux de la société -->
   <h2>Liste des Commerciaux</h2>
-  <table id="commercialsTable">
-    <thead>
-      <tr>
-        <th>Email du Commercial</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="commercialsContainer">
-      <!-- La liste des commerciaux avec bouton de suppression sera générée ici par JavaScript -->
-    </tbody>
-  </table>
+  <ul id="commercialsContainer">
+    <!-- La liste des commerciaux avec bouton de suppression sera générée ici par JavaScript -->
+  </ul>
 
   <!-- Charger Firebase SDK et Chart.js depuis les CDN -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>

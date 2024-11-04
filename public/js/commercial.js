@@ -5,7 +5,8 @@ function afficherEmailEtSocieteCommercial() {
     .then((doc) => {
       if (doc.exists) {
         const email = doc.data().email;
-        const societeId = doc.data().societeId;  // Récupération du societeId
+        const societeId = doc.data().societeId;
+        console.log("societeId récupéré : ", societeId);
         const emailPart = email.split('@')[0];
         document.getElementById("commercialName").textContent = `Tableau de Bord de ${emailPart}`;
 
@@ -14,19 +15,50 @@ function afficherEmailEtSocieteCommercial() {
           .then((societeDoc) => {
             if (societeDoc.exists) {
               const nomSociete = societeDoc.data().nom;
-              document.getElementById("societeName").textContent = `Société : ${nomSociete}`;
+              document.getElementById("societeId").textContent = `Société : ${nomSociete}`;
             } else {
-              console.warn("Aucune société trouvée avec cet ID.");
+              console.warn("Aucune société trouvée avec cet ID :", societeId);
             }
           })
           .catch((error) => console.error("Erreur lors de la récupération de la société :", error));
         
-        afficherOperationsClients(societeId);  // Passer societeId pour afficher les opérations
+        afficherOperationsClients(societeId);
       } else {
         console.warn("Aucun utilisateur trouvé avec cet ID dans Firestore.");
       }
     })
     .catch((error) => console.error("Erreur lors de la récupération de l'email du commercial :", error));
+}
+
+// Fonction pour envoyer une notification au responsable après une opération commerciale
+function envoyerNotificationResponsable(montant) {
+  firebase.firestore().collection("Users").where("role", "==", "responsable").get()
+    .then((querySnapshot) => {
+      querySnapshot.forEach((doc) => {
+        const fcmToken = doc.data().fcmToken;
+        if (fcmToken) {
+          fetch("https://fcm.googleapis.com/fcm/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "key=BP6r1XmEJLm5A6V2v47EynRkwKj8WN8173rEkAuUGXBNusUAn8-DSxpyplxElHCSArS2lASZRqw9krrZ73b0EW4"  // Remplacez par votre clé de serveur Firebase
+            },
+            body: JSON.stringify({
+              to: fcmToken,
+              notification: {
+                title: "Nouvelle Opération Commerciale",
+                body: `Une opération de ${montant} MAD a été enregistrée.`,
+                click_action: "FLUTTER_NOTIFICATION_CLICK"
+              }
+            })
+          }).then(response => response.json())
+            .then(data => console.log("Notification envoyée :", data))
+            .catch(error => console.error("Erreur lors de l'envoi de la notification :", error));
+        } else {
+          console.warn("Aucun token FCM trouvé pour le responsable");
+        }
+      });
+    });
 }
 
 // Fonction pour ajouter ou modifier un client
@@ -38,7 +70,6 @@ function ajouterOuModifierClient(event) {
   const orderNumber = document.getElementById("orderNumber").value;
   const userId = firebase.auth().currentUser.uid;
 
-  // Récupérer le societeId de l'utilisateur
   firebase.firestore().collection("Users").doc(userId).get()
     .then((userDoc) => {
       const societeId = userDoc.data().societeId;
@@ -49,7 +80,7 @@ function ajouterOuModifierClient(event) {
           name: clientName,
           amount: clientAmount,
           orderNumber: orderNumber,
-          societeId: societeId // Inclure le societeId
+          societeId: societeId
         }).then(() => {
           console.log("Client modifié avec succès");
           document.getElementById("addClientForm").reset();
@@ -57,6 +88,7 @@ function ajouterOuModifierClient(event) {
           document.getElementById("formTitle").textContent = "Ajouter un Client";
           document.getElementById("submitButton").textContent = "Ajouter Client";
           afficherOperationsClients(societeId);
+          envoyerNotificationResponsable(clientAmount); // Envoyer une notification
         }).catch((error) => {
           console.error("Erreur lors de la modification du client :", error);
         });
@@ -67,12 +99,13 @@ function ajouterOuModifierClient(event) {
           amount: clientAmount,
           orderNumber: orderNumber,
           userId: userId,
-          societeId: societeId, // Inclure le societeId
+          societeId: societeId,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
           console.log("Client ajouté avec succès");
           document.getElementById("addClientForm").reset();
           afficherOperationsClients(societeId);
+          envoyerNotificationResponsable(clientAmount); // Envoyer une notification
         }).catch((error) => {
           console.error("Erreur lors de l'ajout du client :", error);
         });
@@ -81,24 +114,20 @@ function ajouterOuModifierClient(event) {
     .catch((error) => console.error("Erreur lors de la récupération du societeId :", error));
 }
 
-// Fonction pour afficher les opérations des clients et le total des montants avec filtre de dates et de societeId
+// Fonction pour afficher les opérations des clients avec des boutons "Modifier" et "Supprimer"
 function afficherOperationsClients(societeId) {
   const userId = firebase.auth().currentUser.uid;
   const tableOperationsClientsBody = document.getElementById("tableOperationsClients").getElementsByTagName("tbody")[0];
-  tableOperationsClientsBody.innerHTML = ""; // Réinitialiser le tableau
+  tableOperationsClientsBody.innerHTML = "";
 
-  let totalAmount = 0; // Initialiser le total des montants
-
-  // Récupération des dates sélectionnées et ajustement pour inclure toute la journée
+  let totalAmount = 0;
   const startDate = document.getElementById("startDate").value ? new Date(document.getElementById("startDate").value) : null;
   const endDate = document.getElementById("endDate").value ? new Date(document.getElementById("endDate").value) : null;
 
-  // Ajuster endDate pour inclure toute la journée jusqu'à 23:59:59.999
   if (endDate) {
     endDate.setHours(23, 59, 59, 999);
   }
 
-  // Filtrer par userId et societeId
   firebase.firestore().collection("Clients")
     .where("userId", "==", userId)
     .where("societeId", "==", societeId)
@@ -108,7 +137,6 @@ function afficherOperationsClients(societeId) {
         const clientData = clientDoc.data();
         const dateOperation = clientData.createdAt ? clientData.createdAt.toDate() : null;
 
-        // Filtrer par la plage de dates en incluant les dates de début et de fin
         if ((!startDate || (dateOperation && dateOperation >= startDate)) &&
             (!endDate || (dateOperation && dateOperation <= endDate))) {
           totalAmount += clientData.amount;
@@ -116,13 +144,11 @@ function afficherOperationsClients(societeId) {
           const trClient = document.createElement("tr");
           trClient.innerHTML = `
             <td>${clientData.name}</td>
-            <td>${clientData.amount} MAD</td>
+            <td class="total-ventes">${clientData.amount} MAD</td>
             <td>${clientData.orderNumber}</td>
             <td>${dateOperation ? dateOperation.toLocaleDateString() : "N/A"}</td>
-            <td>
-              <button onclick="preparerModificationClient('${clientDoc.id}')">Modifier</button>
-              <button onclick="supprimerClient('${clientDoc.id}')">Supprimer</button>
-            </td>
+            <td><button onclick="preparerModificationClient('${clientDoc.id}')">Modifier</button></td>
+            <td><button onclick="supprimerClient('${clientDoc.id}')">Supprimer</button></td>
           `;
           tableOperationsClientsBody.appendChild(trClient);
         }
@@ -131,6 +157,17 @@ function afficherOperationsClients(societeId) {
       document.getElementById("totalAmount").textContent = `${totalAmount} MAD`;
     })
     .catch((error) => console.error("Erreur lors de la récupération des opérations des clients :", error));
+}
+
+// Fonction pour filtrer le tableau en fonction de la recherche
+function filterTable() {
+  const searchTerm = document.getElementById("searchBar").value.toLowerCase();
+  const rows = document.getElementById("tableOperationsClients").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+  Array.from(rows).forEach(row => {
+    const rowText = row.textContent.toLowerCase();
+    row.style.display = rowText.includes(searchTerm) ? "" : "none";
+  });
 }
 
 // Préparer les valeurs de modification dans le formulaire
@@ -169,7 +206,7 @@ firebase.auth().onAuthStateChanged((user) => {
   if (user) {
     afficherEmailEtSocieteCommercial();
     document.getElementById("startDate").addEventListener("change", () => {
-      afficherEmailEtSocieteCommercial(); // Recharge les opérations avec les nouvelles dates
+      afficherEmailEtSocieteCommercial();
     });
     document.getElementById("endDate").addEventListener("change", () => {
       afficherEmailEtSocieteCommercial();

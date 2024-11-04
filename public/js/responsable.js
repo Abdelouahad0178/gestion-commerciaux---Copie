@@ -14,7 +14,6 @@ firebase.auth().onAuthStateChanged((user) => {
             return;
           }
           console.log("Utilisateur responsable authentifié pour la société :", societeId);
-          afficherNomSociete(societeId);  // Affiche le nom de la société
           remplirSelecteurCommerciaux(societeId);  // Remplit le sélecteur de commerciaux
           afficherListeCommerciaux(societeId); // Affiche la liste des commerciaux pour suppression
         } else {
@@ -29,20 +28,6 @@ firebase.auth().onAuthStateChanged((user) => {
     window.location.href = "login.html";
   }
 });
-
-// Fonction pour afficher le nom de la société
-function afficherNomSociete(societeId) {
-  firebase.firestore().collection("Societes").doc(societeId).get()
-    .then((doc) => {
-      if (doc.exists) {
-        const nomSociete = doc.data().nom;
-        document.getElementById("societeName").textContent = `Société : ${nomSociete}`;
-      } else {
-        console.warn("Aucune société trouvée avec cet ID.");
-      }
-    })
-    .catch((error) => console.error("Erreur lors de la récupération de la société :", error));
-}
 
 // Remplir le sélecteur de commerciaux pour la société spécifique
 function remplirSelecteurCommerciaux(societeId) {
@@ -63,10 +48,10 @@ function remplirSelecteurCommerciaux(societeId) {
     .catch((error) => console.error("Erreur lors de la récupération des commerciaux :", error));
 }
 
-// Fonction pour afficher la liste des commerciaux sous forme de tableau avec option de suppression
+// Fonction pour afficher la liste des commerciaux avec option de suppression
 function afficherListeCommerciaux(societeId) {
   const commercialsContainer = document.getElementById("commercialsContainer");
-  commercialsContainer.innerHTML = ""; // Réinitialiser le tableau
+  commercialsContainer.innerHTML = ""; // Réinitialiser la liste
 
   firebase.firestore().collection("Users")
     .where("role", "==", "commercial")
@@ -77,13 +62,15 @@ function afficherListeCommerciaux(societeId) {
         const commercial = userDoc.data();
         const commercialId = userDoc.id;
 
-        // Créez la ligne de tableau avec le bouton de suppression
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${commercial.email}</td>
-          <td><button onclick="supprimerCommercial('${commercialId}')">Supprimer</button></td>
-        `;
-        commercialsContainer.appendChild(tr);
+        const li = document.createElement("li");
+        li.textContent = commercial.email;
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "Supprimer";
+        deleteButton.onclick = () => supprimerCommercial(commercialId);
+
+        li.appendChild(deleteButton);
+        commercialsContainer.appendChild(li);
       });
     })
     .catch((error) => console.error("Erreur lors de la récupération des commerciaux :", error));
@@ -97,18 +84,14 @@ function supprimerCommercial(commercialId) {
         console.log("Commercial supprimé avec succès.");
         alert("Commercial supprimé avec succès.");
 
-        // Récupérer l'ID de la société du responsable actuel pour rafraîchir la liste et le sélecteur des commerciaux
         const userId = firebase.auth().currentUser.uid;
         firebase.firestore().collection("Users").doc(userId).get()
           .then((doc) => {
             const societeId = doc.data().societeId;
             
-            // Mettre à jour la liste des commerciaux
             afficherListeCommerciaux(societeId);
-
-            // Mettre à jour le sélecteur des commerciaux
             const commercialSelector = document.getElementById("commercialSelector");
-            commercialSelector.innerHTML = '<option value="">-- Tous les commerciaux --</option>'; // Réinitialise le sélecteur
+            commercialSelector.innerHTML = '<option value="">-- Tous les commerciaux --</option>';
             remplirSelecteurCommerciaux(societeId);
           })
           .catch((error) => console.error("Erreur lors de la récupération du societeId :", error));
@@ -182,10 +165,42 @@ function afficherRapport() {
 
                 const trCommercial = document.createElement("tr");
                 trCommercial.innerHTML = `
-                  <td>${commercialName}</td>
-                  <td>${totalVentes} MAD</td>
+                    <td>${commercialName}</td>
+                    <td>${totalVentes} MAD</td>
+                    <td><input type="number" min="0" max="100" placeholder="%" class="percentage-input"></td>
+                    <td class="montant-calcule">0 MAD</td>
+                    <td><button class="valider-btn">Valider</button></td>
                 `;
                 tableRecapCommerciauxBody.appendChild(trCommercial);
+                
+                // Gestionnaire d'événement pour le bouton "Valider"
+                trCommercial.querySelector(".valider-btn").addEventListener("click", () => {
+                    const percentageInput = trCommercial.querySelector(".percentage-input");
+                    const montantCell = trCommercial.querySelector(".montant-calcule");
+                
+                    const pourcentage = parseFloat(percentageInput.value);
+                    if (isNaN(pourcentage) || pourcentage < 0 || pourcentage > 100) {
+                        alert("Veuillez entrer un pourcentage valide entre 0 et 100.");
+                        return;
+                    }
+                
+                    const montantCalculé = (totalVentes * pourcentage) / 100;
+                    montantCell.textContent = `${montantCalculé.toFixed(2)} MAD`;
+
+                    const periode = startDate && endDate ? `de ${startDate.toLocaleDateString()} à ${endDate.toLocaleDateString()}` : "Période inconnue";
+
+                    firebase.firestore().collection("SalesData").doc(commercialId).set({
+                        commercialName: commercialName,   
+                        totalVentes: totalVentes,         
+                        pourcentage: pourcentage,         
+                        montantCalculé: montantCalculé,    
+                        periode: periode                  
+                    }).then(() => {
+                        console.log("Données sauvegardées avec succès pour le commercial.");
+                    }).catch(error => {
+                        console.error("Erreur lors de la sauvegarde des données :", error);
+                    });
+                });
 
                 grandTotalElement.textContent = `${grandTotal} MAD`;
               })
@@ -197,43 +212,60 @@ function afficherRapport() {
     .catch((error) => console.error("Erreur lors de la récupération de l'ID de société :", error));
 }
 
-// Fonction pour générer le diagramme en disque
-function genererDiagramme() {
+// Fonction pour afficher et masquer le diagramme en disque des ventes
+let isChartVisible = false;
+
+function toggleDiagramme() {
   const labels = Object.keys(salesData);
   const data = Object.values(salesData);
   const grandTotal = parseFloat(document.getElementById("grandTotal").textContent.replace(" MAD", ""));
 
-  // Détruire l'ancienne instance du diagramme si elle existe
-  if (chartInstance) {
+  if (isChartVisible && chartInstance) {
     chartInstance.destroy();
-  }
+    chartInstance = null;
+    isChartVisible = false;
+    document.getElementById("salesChart").style.display = "none"; 
+  } else {
+    const ctx = document.getElementById("salesChart").getContext("2d");
+    document.getElementById("salesChart").style.display = "block"; 
 
-  const ctx = document.getElementById("salesChart").getContext("2d");
-  chartInstance = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: labels,
-      datasets: [{
-        data: data,
-        backgroundColor: labels.map(() => `#${Math.floor(Math.random() * 16777215).toString(16)}`), // Couleurs aléatoires
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'top',
-        },
-        tooltip: {
-          callbacks: {
-            label: (tooltipItem) => {
-              const montant = data[tooltipItem.dataIndex];
-              const pourcentage = ((montant / grandTotal) * 100).toFixed(2);
-              return `${tooltipItem.label}: ${montant} MAD (${pourcentage}%)`;
+    chartInstance = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: labels.map(() => `#${Math.floor(Math.random() * 16777215).toString(16)}`), 
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: (tooltipItem) => {
+                const montant = data[tooltipItem.dataIndex];
+                const pourcentage = ((montant / grandTotal) * 100).toFixed(2);
+                return `${tooltipItem.label}: ${montant} MAD (${pourcentage}%)`;
+              }
             }
           }
         }
       }
-    }
+    });
+    isChartVisible = true;
+  }
+}
+
+
+
+function filtrerClientsParNom() {
+  const searchTerm = document.getElementById("searchBar").value.toLowerCase();
+  const rows = document.getElementById("tableDetailsClients").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+  Array.from(rows).forEach(row => {
+      const clientName = row.cells[1].textContent.toLowerCase(); // Suppose que le nom du client est dans la 2ème colonne
+      row.style.display = clientName.startsWith(searchTerm) ? "" : "none";
   });
 }

@@ -6,7 +6,6 @@
   --background-color: #f1f2f6;
   --text-color: #2c3e50;
   --light-text-color: #ffffff;
-  --danger-color: #e74c3c; /* Couleur pour le bouton de suppression */
 }
 
 /* Reset CSS pour uniformiser l'apparence */
@@ -35,7 +34,7 @@ h1 {
   text-align: center;
 }
 
-/* Boutons généraux */
+/* Boutons */
 button {
   background-color: var(--secondary-color);
   color: var(--light-text-color);
@@ -50,16 +49,6 @@ button {
 
 button:hover {
   background-color: var(--primary-color);
-}
-
-/* Bouton de suppression */
-button.delete-btn {
-  background-color: var(--danger-color);
-  padding: 8px 15px;
-}
-
-button.delete-btn:hover {
-  background-color: darken(var(--danger-color), 10%);
 }
 
 /* Formulaire de sélection */
@@ -96,7 +85,6 @@ table thead th {
   padding: 15px;
   text-align: left;
   font-weight: bold;
-  text-transform: uppercase;
 }
 
 table tbody tr {
@@ -110,29 +98,11 @@ table tbody tr:nth-child(even) {
 table tbody td {
   padding: 15px;
   color: var(--text-color);
-  text-align: left;
 }
 
 table tbody tr:hover {
   background-color: var(--accent-color);
   color: var(--light-text-color);
-}
-
-/* Style spécifique pour les boutons de tableau */
-table tbody td button {
-  padding: 8px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-table tbody td button.delete-btn {
-  background-color: var(--danger-color);
-  color: var(--light-text-color);
-}
-
-table tbody td button.delete-btn:hover {
-  background-color: #c0392b;
 }
 
 /* Réactivité */

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Récapitulatif des Ventes Validées</title>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+  <script src="./js/firebaseConfig.js"></script> <!-- Assurez-vous que firebaseConfig.js est inclus -->
+  <script src="./js/recapitulatif_ventes.js"></script> <!-- Script principal -->
+  <link rel="stylesheet" href="./css/dashboard.css"> <!-- Fichier CSS principal -->
+</head>
+<body>
+
+  <h1>Récapitulatif des Ventes Validées</h1>
+  
+  <!-- Sélecteur de période -->
+  <label for="periodeSelector">Filtrer par période :</label>
+  <select id="periodeSelector">
+    <option value="">Toutes les périodes</option>
+  </select>
+  
+  <!-- Tableau des ventes -->
+  <table id="tableRecapVentes">
+    <thead>
+      <tr>
+        <th>Nom du Commercial</th>
+        <th>Total des Ventes (MAD)</th>
+        <th>Pourcentage (%)</th>
+        <th>Montant Validé (MAD)</th>
+        <th>Période Validée</th>
+        <th>Actions</th> <!-- Nouvelle colonne Actions -->
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Les lignes de ventes seront insérées ici dynamiquement -->
+    </tbody>
+  </table>
+  <a href="./responsable_dashboard.html" class="link-button"> Retour Page Responsable</a>
+  <!-- Bouton pour envoyer le récapitulatif par WhatsApp -->
+  <button id="sendWhatsappButton">Envoyer par WhatsApp</button>
+
+  <!-- Conteneur pour le formulaire de modification (sera ajouté dynamiquement) -->
+  <div id="formContainer" style="display: none;"></div>
+
+</body>
+</html>
